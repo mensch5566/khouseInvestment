@@ -39,7 +39,7 @@
                 
                 // 篩選檔案：只顯示 .html 且不顯示 index.html 本身
                 const files = data.filter(file => 
-                    file.name.endsWith('.html') && 
+                    file.name.includes('.htm') && 
                     file.name.toLowerCase() !== 'index.html'
                 );
 
