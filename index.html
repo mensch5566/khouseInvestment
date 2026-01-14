@@ -3,68 +3,156 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>KHouse Investment 檔案列表</title>
+    <title>KHouse 投資研究資料庫</title>
     <style>
-        body { font-family: "Helvetica Neue", Arial, sans-serif; max-width: 800px; margin: 40px auto; padding: 20px; line-height: 1.6; }
-        h1 { border-bottom: 2px solid #333; padding-bottom: 10px; }
+        body { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif; max-width: 900px; margin: 40px auto; padding: 20px; color: #333; background-color: #fcfcfc; }
+        h1 { border-bottom: 3px solid #24292e; padding-bottom: 15px; margin-bottom: 30px; letter-spacing: 1px; }
+        h2 { margin-top: 40px; color: #0366d6; border-bottom: 1px solid #eaecef; padding-bottom: 10px; }
+        
+        .status-bar { font-size: 0.9em; color: #666; margin-bottom: 20px; min-height: 20px; }
+        .status-success { color: #28a745; }
+        .status-warning { color: #d73a49; }
+
         ul { list-style-type: none; padding: 0; }
-        li { margin: 10px 0; background: #f9f9f9; padding: 10px; border-radius: 5px; }
-        a { text-decoration: none; color: #0366d6; font-weight: bold; font-size: 1.1em; }
-        a:hover { text-decoration: underline; }
-        .loading { color: #666; font-style: italic; }
+        
+        li { 
+            background: #fff; 
+            border: 1px solid #e1e4e8; 
+            margin-bottom: 12px; 
+            border-radius: 6px; 
+            transition: all 0.2s ease;
+            box-shadow: 0 1px 3px rgba(0,0,0,0.04);
+        }
+        li:hover { 
+            border-color: #0366d6; 
+            transform: translateY(-2px); 
+            box-shadow: 0 4px 12px rgba(0,0,0,0.1); 
+        }
+
+        a { 
+            display: flex; 
+            padding: 20px; 
+            text-decoration: none; 
+            color: #24292e; 
+            align-items: center; 
+            font-weight: 600; 
+            font-size: 1.1em;
+        }
+        
+        .icon { margin-right: 15px; font-size: 1.4em; }
+        .name { flex-grow: 1; }
+        /* 標籤樣式 */
+        .tag { font-size: 0.8em; padding: 4px 8px; border-radius: 20px; font-weight: normal; margin-left: 10px; }
+        .tag-highlight { background: #fff8c5; color: #b08800; border: 1px solid #e3d386; } /* 精選標籤 */
+        .tag-pdf { background: #ffeef0; color: #cb2431; }
+        .tag-html { background: #f1f8ff; color: #0366d6; }
+
+        .loading { color: #586069; font-style: italic; animation: blink 1.5s infinite; }
+        @keyframes blink { 50% { opacity: 0.5; } }
+        
+        /* 手動區塊特別顯眼一點 */
+        #manual-list li { border-left: 5px solid #f1e05a; }
     </style>
 </head>
 <body>
 
-    <h1>📚 KHouse 投資參考資料 (自動更新)</h1>
+    <h1>📚 KHouse 投資研究資料庫</h1>
+    <div id="status" class="status-bar"></div>
+
+    <h2>⭐ 精選重點引用 (Key Highlights)</h2>
+    <ul id="manual-list">
+        
+        <li>
+            <a href="2024Urenco.pdf#page=14" target="_blank">
+                <span class="icon">🎯</span>
+                <span class="name">Urenco 2024 年報 - 關於產能擴充 (第14頁)</span>
+                <span class="tag tag-highlight">重點</span>
+            </a>
+        </li>
+        
+        </ul>
+
+    <h2>📂 完整檔案庫 (自動更新)</h2>
     <div id="file-list">
-        <p class="loading">正在掃描 GitHub 倉庫中的檔案...</p>
+        <p class="loading">正在掃描 GitHub 倉庫資料...</p>
     </div>
 
     <script>
-        // 設定你的 GitHub 帳號與倉庫名稱
         const USER_NAME = 'mensch5566';
         const REPO_NAME = 'khouseInvestment';
         
-        // GitHub API 網址
         const apiUrl = `https://api.github.com/repos/${USER_NAME}/${REPO_NAME}/contents/`;
+        const CACHE_KEY = 'khouse_files_cache';
 
         async function fetchFiles() {
+            const statusDiv = document.getElementById('status');
+            const listContainer = document.getElementById('file-list');
+
             try {
                 const response = await fetch(apiUrl);
+                if (response.status === 403) throw new Error("API_RATE_LIMIT");
+                if (!response.ok) throw new Error("NETWORK_ERROR");
+
                 const data = await response.json();
-                
-                const listContainer = document.getElementById('file-list');
-                let html = '<ul>';
-                
-                // 篩選檔案：只顯示 .html 且不顯示 index.html 本身
-                const files = data.filter(file => 
-                    file.name.includes('.htm') && 
-                    file.name.toLowerCase() !== 'index.html'
-                );
-
-                if (files.length === 0) {
-                    listContainer.innerHTML = '<p>目前沒有找到其他的 HTML 檔案。</p>';
-                    return;
-                }
-
-                // 生成列表
-                files.forEach(file => {
-                    // 這裡直接使用 GitHub Pages 的網址路徑
-                    const pageUrl = `https://${USER_NAME}.github.io/${REPO_NAME}/${file.name}`;
-                    // 把檔名中的 .html 去掉，並把 %20 (空格) 換成空格顯示，比較好看
-                    const displayName = decodeURIComponent(file.name).replace('.html', '');
-                    
-                    html += `<li>📄 <a href="${pageUrl}">${displayName}</a></li>`;
-                });
-
-                html += '</ul>';
-                listContainer.innerHTML = html;
+                localStorage.setItem(CACHE_KEY, JSON.stringify(data));
+                renderList(data);
+                statusDiv.innerHTML = '<span class="status-success">● 已更新至最新列表</span>';
 
             } catch (error) {
-                console.error('Error:', error);
-                document.getElementById('file-list').innerHTML = '<p style="color:red">無法讀取檔案列表，可能是 API 限制或連線錯誤。</p>';
+                console.warn('讀取失敗，使用快取...', error);
+                const cachedData = localStorage.getItem(CACHE_KEY);
+                if (cachedData) {
+                    renderList(JSON.parse(cachedData));
+                    statusDiv.innerHTML = '<span class="status-warning">● 流量限制中，目前顯示快取列表</span>';
+                } else {
+                    listContainer.innerHTML = '<p style="color:red">無法讀取列表，請稍後再試。</p>';
+                }
             }
+        }
+
+        function renderList(data) {
+            const listContainer = document.getElementById('file-list');
+            let html = '<ul>';
+            
+            const files = data.filter(file => 
+                (file.name.endsWith('.html') || file.name.endsWith('.htm') || file.name.endsWith('.pdf')) && 
+                file.name.toLowerCase() !== 'index.html'
+            );
+
+            // 排序
+            files.sort((a, b) => a.name < b.name ? 1 : -1);
+
+            if (files.length === 0) {
+                listContainer.innerHTML = '<p>目前沒有找到文件。</p>';
+                return;
+            }
+
+            files.forEach(file => {
+                // 修正：加上 encodeURIComponent 解決檔名空格導致 PDF 無法開啟的問題
+                const pageUrl = `https://${USER_NAME}.github.io/${REPO_NAME}/${encodeURIComponent(file.name)}`;
+                
+                let displayName = decodeURIComponent(file.name)
+                    .replace('.html', '')
+                    .replace('.htm', '')
+                    .replace('.pdf', '')
+                    .replace(/_/g, ' ');
+
+                let tag = '<span class="tag tag-html">HTML</span>';
+                if(file.name.endsWith('.pdf')) tag = '<span class="tag tag-pdf">PDF</span>';
+
+                // 加上 target="_blank" 讓它在新分頁開啟，閱讀體驗更好
+                html += `
+                    <li>
+                        <a href="${pageUrl}" target="_blank">
+                            <span class="icon">📄</span>
+                            <span class="name">${displayName}</span>
+                            ${tag}
+                        </a>
+                    </li>`;
+            });
+
+            html += '</ul>';
+            listContainer.innerHTML = html;
         }
 
         fetchFiles();
